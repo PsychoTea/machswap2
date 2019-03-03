@@ -4,6 +4,6 @@ An iOS kernel exploit for iOS 11 - 12.1.2. Based on the task_swap_mach_voucher b
 
 Works on A7 - A11 devices (no A12 as I have no A12 device). 
 
-Many thanks to @s1guza, @littlelailo, and @qwertyoruiopz. 
+Many thanks to @s1guza, @littlelailo, and @qwertyoruiopz. Oh, and that whoever that was at c3 that suggested using Mach messages as kernel buffers.
 
 Twitter - https://twitter.com/iBSparkes 
