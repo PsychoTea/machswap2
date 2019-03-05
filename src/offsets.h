@@ -11,36 +11,6 @@ typedef struct {
     } constant;
 
     struct {
-        /* nm kernel | grep '_copyin' */
-        uint64_t copyin;
-
-        /* nm kernel | grep '_copyout' */
-        uint64_t copyout;
-
-        /* nm kernel | grep '_kalloc_external' */
-        uint64_t kalloc_external;
-
-        /* nm kernel | grep '_csblob_get_cdhash' */
-        uint64_t csblob_get_cdhash;
-    } funcs;
-
-    struct {
-        /* 
-            str 'zone_init: kmem_suballoc failed', 
-            first addrp ins above will load address of zone_map,
-            image: https://i.imgur.com/ygMcZYs.png
-        */
-        uint64_t zonemap;
-
-        /*
-            _host_priv_self symbol
-            'adrp x0, #realhost [...]'
-            image: https://i.imgur.com/17CkpY8.png
-        */
-        uint64_t realhost;
-    } data;
-
-    struct {
         /* 
             nm kernel | grep '_proc_pid'
             'ldr w0, [x0, #offset]
